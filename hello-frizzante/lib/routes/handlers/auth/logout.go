@@ -11,7 +11,12 @@ import (
 
 // Logout clears the auth cookie
 func Logout(c *client.Client) {
-	name := config.AuthCookieName()
+	name, err := config.AuthCookieName()
+	if err != nil {
+		send.Status(c, 500)
+		send.Json(c, map[string]string{"error": err.Error()})
+		return
+	}
 	// Expire the cookie immediately
 	expire := time.Now().Add(-time.Hour).UTC().Format(time.RFC1123)
 	send.Header(c, "Set-Cookie", fmt.Sprintf("%s=; Path=/; HttpOnly; Expires=%s; Max-Age=0", name, expire))

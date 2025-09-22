@@ -99,17 +99,12 @@ func SupabaseJWTSecret() (string, error) {
 	return require("SUPABASE_JWT_SECRET")
 }
 
-// Optional: JWKS URL for asymmetric JWT verification (e.g., https://<project>.supabase.co/auth/v1/keys)
-// If provided, the auth verifier will prefer JWKS over HS256 secret.
-func SupabaseJWKSURL() string {
-	return get("SUPABASE_JWKS_URL")
+// JWKS URL for asymmetric JWT verification (e.g., https://<project>.supabase.co/auth/v1/keys)
+func SupabaseJWKSURL() (string, error) {
+	return require("SUPABASE_JWKS_URL")
 }
 
 // Name of the auth cookie storing the access token
-func AuthCookieName() string {
-	name := get("AUTH_COOKIE_NAME")
-	if strings.TrimSpace(name) == "" {
-		return "sb-access-token"
-	}
-	return name
+func AuthCookieName() (string, error) {
+	return require("AUTH_COOKIE_NAME")
 }

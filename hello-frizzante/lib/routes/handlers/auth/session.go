@@ -28,7 +28,12 @@ func Session(c *client.Client) {
 	}
 
 	// Set cookie
-	name := config.AuthCookieName()
+	name, nerr := config.AuthCookieName()
+	if nerr != nil {
+		send.Status(c, 500)
+		send.Json(c, map[string]string{"error": nerr.Error()})
+		return
+	}
 	send.Cookie(c, name, token)
 	send.Status(c, 204)
 	send.Message(c, "")

@@ -17,7 +17,10 @@ func New() guard.Guard {
 	return guard.Guard{
 		Name: "auth",
 		Handler: func(c *client.Client, allow func()) {
-			cookieName := config.AuthCookieName()
+			cookieName, err := config.AuthCookieName()
+			if err != nil {
+				return
+			}
 			tok := receive.Cookie(c, cookieName)
 			if tok == "" {
 				return

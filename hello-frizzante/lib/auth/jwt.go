@@ -33,8 +33,8 @@ func ParseAndVerify(tokenString string) (Claims, error) {
 		return empty, errors.New("empty token")
 	}
 
-	jwksURL := config.SupabaseJWKSURL()
-	if strings.TrimSpace(jwksURL) == "" {
+	jwksURL, jerr := config.SupabaseJWKSURL()
+	if jerr != nil || strings.TrimSpace(jwksURL) == "" {
 		return empty, errors.New("SUPABASE_JWKS_URL is required for JWT verification")
 	}
 

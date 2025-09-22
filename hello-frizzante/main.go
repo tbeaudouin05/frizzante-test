@@ -6,6 +6,7 @@ import (
 	"embed"
 	"os"
 
+	"main/lib/config"
 	"main/lib/core/guard"
 	"main/lib/core/tag"
 	"main/lib/core/route"
@@ -27,7 +28,17 @@ var srv = server.New()
 var dev = os.Getenv("DEV") == "1"
 var render = ssr.New(ssr.Config{Efs: efs, Disk: dev})
 
+func mustEnv() {
+    if _, err := config.SupabaseJWKSURL(); err != nil {
+        panic(err)
+    }
+    if _, err := config.AuthCookieName(); err != nil {
+        panic(err)
+    }
+}
+
 func main() {
+	mustEnv()
 	defer server.Start(srv)
 
 	srv.Efs = efs

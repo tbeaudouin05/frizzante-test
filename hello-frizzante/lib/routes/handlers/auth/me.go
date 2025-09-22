@@ -10,7 +10,12 @@ import (
 
 // Me returns decoded JWT claims if cookie is valid.
 func Me(c *client.Client) {
-	name := config.AuthCookieName()
+	name, nerr := config.AuthCookieName()
+	if nerr != nil {
+		send.Status(c, 500)
+		send.Json(c, map[string]string{"error": nerr.Error()})
+		return
+	}
 	token := receive.Cookie(c, name)
 	if token == "" {
 		send.Status(c, 401)

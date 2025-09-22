@@ -20,10 +20,9 @@
     date ? `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}` : ""
   )
 
-  const timeSlots = Array.from({ length: (20 - 6) * 2 + 1 }, (_, i) => {
-    const h = Math.floor(6 + i / 2)
-    const m = i % 2 === 0 ? "00" : "30"
-    return `${String(h).padStart(2, "0")}:${m}`
+  const timeSlots = Array.from({ length: (18 - 7 + 1) }, (_, i) => {
+    const h = 7 + i // 07:00 through 18:00
+    return `${String(h).padStart(2, "0")}:00`
   })
 
   function onBook() {

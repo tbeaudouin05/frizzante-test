@@ -5,6 +5,7 @@ go 1.25
 require (
 	github.com/dop251/goja v0.0.0-20250630131328-58d95d85e994
 	github.com/evanw/esbuild v0.25.10
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/gorilla/websocket v1.5.3
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 )

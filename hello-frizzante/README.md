@@ -140,3 +140,73 @@ The CLI will scaffold files like `app/lib/components/ui/<component>/` and update
 - This codebase uses Svelte 5 `$state` and `$derived`, which require Svelte 5 configuration (already set up in `svelte.config.js`).
 - Frizzante actions/helpers live under `app/lib/scripts/core/` (e.g., `action.ts`, `href.ts`).
 - UI is Tailwind-based; styles are configured in `tailwind.config.ts` and imported via Vite.
+
+## Supabase Auth Integration
+
+This project includes Supabase email/password auth.
+
+- Backend handlers (Go): `lib/routes/handlers/auth/`
+  - `login.go`: serves the Login view
+  - `session.go`: exchanges `Authorization: Bearer <access_token>` for an HttpOnly cookie session
+  - `logout.go`: clears the cookie and navigates home
+  - `me.go`: returns decoded JWT claims from the cookie
+
+- Guard (Go): `lib/guards/auth/guard.go`
+  - Register it in `main.go` via `srv.Guards = []guard.Guard{ authguard.New() }`
+  - Protect routes using `Tags: []tag.Tag{ authguard.Tag }` (already applied to Lessons routes)
+
+- Frontend client (Svelte): `app/lib/supabaseClient.ts`
+  - Uses `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+
+- Frontend view (Svelte): `app/lib/views/Login.svelte`
+  - Calls Supabase `signInWithPassword`, then POSTs to `/auth/session` to set HttpOnly cookie
+
+- UI: Navbar shows Login/Logout based on `/auth/me` result (`app/lib/components/Navbar.svelte`).
+
+### Environment Variables
+
+Create a `.env` at the project root (or set system envs). The `lib/config` package loads `.env` if present then overlays process env variables.
+
+Backend (Go):
+
+```
+SUPABASE_JWKS_URL=https://<your-project-ref>.supabase.co/auth/v1/keys
+# Optional
+AUTH_COOKIE_NAME=sb-access-token
+```
+
+Frontend (Vite) variables should be prefixed with `VITE_`. Add to `app/.env` or export before running dev/build. Supabase now uses the Publishable Key instead of the legacy Anon Key:
+
+```
+VITE_SUPABASE_URL=<your-supabase-url>
+VITE_SUPABASE_PUBLISHABLE_KEY=<your-supabase-publishable-key>
+```
+
+### Dev Flow
+
+1. Install frontend deps (pnpm):
+   ```sh
+   cd app
+   pnpm install
+   ```
+2. Run dev:
+   ```sh
+   frizzante --dev
+   ```
+3. Build front-end:
+   ```sh
+   cd app
+   pnpm vite build
+   ```
+4. Package into Go embeds and run:
+   ```sh
+   cd ..
+   frizzante --package
+   frizzante --dev
+   ```
+
+### Notes on Supabase
+
+- Backend validates JWTs using JWKS (RS256) only. Set `SUPABASE_JWKS_URL` as shown above.
+- The cookie set by `/auth/session` is `HttpOnly` and read server-side for guards.
+- For production, consider `Secure`, `SameSite`, and domain attrs for cookies.

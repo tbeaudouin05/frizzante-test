@@ -9,6 +9,7 @@ import (
 	"main/lib/core/route"
 	"main/lib/core/server"
 	"main/lib/core/view/ssr"
+	"main/lib/routes/handlers/lessons"
 	"main/lib/routes/handlers/todos"
 	"main/lib/routes/handlers/welcome"
 )
@@ -30,6 +31,9 @@ func main() {
 	srv.Routes = []route.Route{
 		{Pattern: "GET /", Handler: welcome.View},
 		{Pattern: "GET /welcome", Handler: welcome.View},
+		{Pattern: "GET /lessons", Handler: lessons.View},
+		{Pattern: "GET /lessons/book", Handler: lessons.Book},
+		{Pattern: "GET /lessons/cancel", Handler: lessons.Cancel},
 		{Pattern: "GET /todos", Handler: todos.View},
 		{Pattern: "GET /check", Handler: todos.Check},
 		{Pattern: "GET /uncheck", Handler: todos.Uncheck},

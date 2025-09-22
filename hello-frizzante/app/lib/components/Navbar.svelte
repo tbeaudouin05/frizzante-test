@@ -10,6 +10,7 @@
     <div class="flex items-center gap-2">
       <Button variant="ghost" class="rounded-full" {...href("/")}>Home</Button>
       <Button variant="ghost" class="rounded-full" {...href("/todos")}>Todos</Button>
+      <Button variant="ghost" class="rounded-full" {...href("/lessons")}>Lessons</Button>
       <ThemeToggle />
     </div>
   </div>

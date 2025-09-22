@@ -9,5 +9,6 @@ func New() *Session {
 			{Checked: false, Description: "Cook"},
 			{Checked: false, Description: "Pet the cat."},
 		},
+		Lessons: []Lesson{},
 	}
 }

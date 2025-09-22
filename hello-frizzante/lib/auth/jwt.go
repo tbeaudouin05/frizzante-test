@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
@@ -38,10 +40,13 @@ func ParseAndVerify(tokenString string) (Claims, error) {
 		return empty, errors.New("SUPABASE_JWKS_URL is required for JWT verification")
 	}
 
-	// JWKS path (asymmetric RS256)
+	// JWKS path (asymmetric; Supabase may use RS256 or ES256)
 	tok, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-		// Expect RS* algorithms
-		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
+		// Expect RSA or ECDSA algorithms
+		switch t.Method.(type) {
+		case *jwt.SigningMethodRSA, *jwt.SigningMethodECDSA:
+			// ok
+		default:
 			return nil, fmt.Errorf("unexpected signing method: %T", t.Method)
 		}
 		kid, _ := t.Header["kid"].(string)
@@ -79,8 +84,9 @@ func ParseAndVerify(tokenString string) (Claims, error) {
 	return out, nil
 }
 
-// jwksKey fetches the JWKS from jwksURL and returns an RSA public key that matches the given kid.
-func jwksKey(jwksURL, kid string) (*rsa.PublicKey, error) {
+// jwksKey fetches the JWKS from jwksURL and returns a public key (*rsa.PublicKey or *ecdsa.PublicKey)
+// that matches the given kid.
+func jwksKey(jwksURL, kid string) (interface{}, error) {
 	// Fetch JWKS
 	resp, err := http.Get(jwksURL)
 	if err != nil {
@@ -95,10 +101,15 @@ func jwksKey(jwksURL, kid string) (*rsa.PublicKey, error) {
 		Keys []struct {
 			Kty string `json:"kty"`
 			Kid string `json:"kid"`
-			N   string `json:"n"`
-			E   string `json:"e"`
 			Use string `json:"use"`
 			Alg string `json:"alg"`
+			// RSA
+			N string `json:"n"`
+			E string `json:"e"`
+			// EC
+			Crv string `json:"crv"`
+			X   string `json:"x"`
+			Y   string `json:"y"`
 		} `json:"keys"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
@@ -108,29 +119,47 @@ func jwksKey(jwksURL, kid string) (*rsa.PublicKey, error) {
 		if k.Kid != kid {
 			continue
 		}
-		if strings.ToUpper(k.Kty) != "RSA" {
+		switch strings.ToUpper(k.Kty) {
+		case "RSA":
+			// n and e are base64url without padding
+			nb, err := base64.RawURLEncoding.DecodeString(k.N)
+			if err != nil {
+				return nil, fmt.Errorf("invalid n: %w", err)
+			}
+			eb, err := base64.RawURLEncoding.DecodeString(k.E)
+			if err != nil {
+				return nil, fmt.Errorf("invalid e: %w", err)
+			}
+			// Convert e to int
+			var eInt int
+			if len(eb) == 0 {
+				return nil, errors.New("empty exponent")
+			}
+			// Common exponents are small (e.g., 65537). Convert big-endian bytes to int.
+			for _, b := range eb {
+				eInt = eInt<<8 | int(b)
+			}
+			n := new(big.Int).SetBytes(nb)
+			return &rsa.PublicKey{N: n, E: eInt}, nil
+		case "EC":
+			// ES256 typically uses P-256 curve
+			if strings.EqualFold(k.Crv, "P-256") || strings.EqualFold(k.Crv, "secp256r1") {
+				xb, err := base64.RawURLEncoding.DecodeString(k.X)
+				if err != nil {
+					return nil, fmt.Errorf("invalid x: %w", err)
+				}
+				yb, err := base64.RawURLEncoding.DecodeString(k.Y)
+				if err != nil {
+					return nil, fmt.Errorf("invalid y: %w", err)
+				}
+				x := new(big.Int).SetBytes(xb)
+				y := new(big.Int).SetBytes(yb)
+				return &ecdsa.PublicKey{Curve: elliptic.P256(), X: x, Y: y}, nil
+			}
+			return nil, fmt.Errorf("unsupported EC curve: %s", k.Crv)
+		default:
 			return nil, fmt.Errorf("unsupported kty: %s", k.Kty)
 		}
-		// n and e are base64url without padding
-		nb, err := base64.RawURLEncoding.DecodeString(k.N)
-		if err != nil {
-			return nil, fmt.Errorf("invalid n: %w", err)
-		}
-		eb, err := base64.RawURLEncoding.DecodeString(k.E)
-		if err != nil {
-			return nil, fmt.Errorf("invalid e: %w", err)
-		}
-		// Convert e to int
-		var eInt int
-		if len(eb) == 0 {
-			return nil, errors.New("empty exponent")
-		}
-		// Common exponents are small (e.g., 65537). Convert big-endian bytes to int.
-		for _, b := range eb {
-			eInt = eInt<<8 | int(b)
-		}
-		n := new(big.Int).SetBytes(nb)
-		return &rsa.PublicKey{N: n, E: eInt}, nil
 	}
 	return nil, errors.New("kid not found in JWKS")
 }

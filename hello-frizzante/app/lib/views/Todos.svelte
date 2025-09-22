@@ -74,7 +74,7 @@
                                             role="checkbox"
                                             aria-checked={todo.checked}
                                             aria-label={todo.checked ? "Uncheck" : "Check"}
-                                            on:click={(e) => { e.preventDefault(); todo.checked = !todo.checked; (e.currentTarget as HTMLButtonElement).form?.requestSubmit(); }}
+                                            onclick={(e) => { e.preventDefault(); todo.checked = !todo.checked; (e.currentTarget as HTMLButtonElement).form?.requestSubmit(); }}
                                         >
                                             {#if todo.checked}
                                                 <Icon path={mdiCheck} size="12" />
